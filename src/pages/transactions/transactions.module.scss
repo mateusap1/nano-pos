@@ -1,0 +1,81 @@
+div .mainContent {
+  margin-left: 250px;
+  padding: 25px;
+
+  table {
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    
+    border-collapse: collapse;
+    border: 0;
+    color: var(--gray-600);
+  
+    thead {
+      tr {
+        th {
+          font-weight: normal;
+          font-size: 22px;
+          padding: 15px;
+        }
+      }
+    }
+
+    tbody {
+      tr {
+        &:nth-child(odd) {
+          background-color: var(--gray-300);
+        }
+        
+        td {
+          text-align: center;
+          padding: 10px;
+
+          span:first-child {
+            font-size: 22px;
+          }
+
+          span:last-child:not(:only-child){
+            font-size: 12px;
+            display: inline-block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 200px;
+            margin-top: 5px;
+          }
+
+          button {
+            font-size: 22px;
+            padding: 10px;
+            width: 90px;
+            border-radius: 10px;
+            background-color: var(--gray-600);
+            color: var(--gray-100);
+            border: 0;
+            
+            &:hover {
+              cursor: pointer;
+            }
+          }
+        }
+
+        .iconContainer {
+          :hover {
+            cursor: pointer;
+          }
+        }
+      }
+    }
+  }
+
+  .buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    :hover {
+      cursor: pointer;
+    }
+  }
+}

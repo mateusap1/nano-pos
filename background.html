@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  </head>
+  <body>
+    <script>
+			const electron = require('electron');
+			const getTransactions = require('./src/background/manageDB').getTransactions;
+			
+			const ipcRenderer = electron.ipcRenderer;
+
+			let message2UI = (command, payload) => {
+				ipcRenderer.send('message-from-worker', {
+					command: command, payload: payload
+				});
+			}
+
+			message2UI('print', {
+				success: true,
+				message: 'Hidden Renderer okay yet'
+			});
+			
+			icpRenderer.send('hidden-renderer-ready');
+
+			message2UI('print', {
+				success: true,
+				message: 'Hidden Renderer okay, waiting for response'
+			});
+
+			ipcRenderer.on('update-transactions', () => {
+				message2UI('print', {
+					success: true,
+					message: 'Hidden Renderer okay, waiting for response'
+				});
+
+				getTransactions(transactions => {
+					message2UI('update-transactions', {
+						success: true,
+						transactions
+					});
+				})
+			})
+		</script>
+  </body>
+</html>
