@@ -1,23 +1,41 @@
 import React from 'react';
-
 import { Link } from 'react-router-dom';
+
+import { useTransactions } from '../../contexts/TransactionsContext';
+
 import styles from './styles.module.scss';
 
 
 export default function({ index, node_address }) {
+  const {
+    info
+  } = useTransactions();
+
   return (
     <div className={styles.sidebar}>
       <h1>Nano Point Of Sale</h1>
       <div>
         <div className={styles.sidebarContent}>
-          <span>Current Balance</span>
-          <br />
-          <span>00.00 nano</span>
+          {info.loading ? (
+            <div className={styles.loading}></div>
+          ) : (
+            <>
+              <span>Current Balance</span>
+              <br />
+              <span>{info.balance.total} Nano</span>
+            </>
+          )}
         </div>
         <div className={styles.sidebarContent}>
-          <span>Today's Profit</span>
-          <br />
-          <span>00.00 nano</span>
+          {info.loading ? (
+            <div className={styles.loading}></div>
+          ) : (
+            <>
+              <span>Today's profit</span>
+              <br />
+              <span>{info.balance.today} Nano</span>
+            </>
+          )}
         </div>
       </div>
       <ul>

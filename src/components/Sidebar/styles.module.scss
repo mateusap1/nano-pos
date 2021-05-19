@@ -71,6 +71,14 @@
       margin-bottom: 70px;
     }
 
+    .loading {
+      background-color: var(--gray-100);
+      width: 100%;
+      min-height: 50px;
+      border-radius: 5px;
+      opacity: 0.3;
+    }
+
     span{
       margin-left: 35px;
       color: var(--gray-300);
