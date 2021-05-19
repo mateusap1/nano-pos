@@ -1,44 +1,65 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+import { message2Background } from '../utils/messageToBackground';
+
 export const TransactionsContext = createContext({});
 
 const electron = require('electron');
 const { ipcRenderer } = electron;
 
+
 export function TransactionsContextProvider({ children }) {
-  const [storedTransactions, setStoredTransactions] = useState([]);
+  let [info, setInfo] = useState(
+    JSON.parse(localStorage.getItem('info')) ? (
+      JSON.parse(localStorage.getItem('info'))
+    ) : {
+      loading: true,
+      settings: {rpcNode: "", wssServer: "", currency: "usd", address: "Unknown"},
+      balance: { total: null, today: null },
+      prettyTransactions: [],
+      rawTransactions: [],
+      prettyItems: [],
+      rawItems: []
+    }
+  );
 
-  useEffect(() => {
-    ipcRenderer.send('main-renderer-ready');
-    ipcRenderer.send('update-transactions');
+  ipcRenderer.on('message-from-worker', (_, arg) => {
+    const command = arg.command;
+    const payload = arg.payload;
 
-    ipcRenderer.on('message-from-worker', (event, arg) => {
-      const payload = arg.payload;
-      const { success } = payload;
-      const command = arg.command;
+    switch (command) {
+      case 'update-info':
+        const { info } = payload;
+        setInfo(info);
+        localStorage.setItem('info', JSON.stringify(info));
 
-      if (command === 'update-transactions' && success) {
-        const { transactions } = payload;
-        setStoredTransactions(transactions);
-        console.log(transactions);
-      } else if (command === 'print' && success) {
+        break;
+
+      case 'print':
         const { message } = payload;
         console.log(message);
-      }
-    });
-  }, []);
+        break;
 
-  function updateTransactions() {
-    getTransactions(transactions => {
-      setStoredTransactions(transactions);
-    });
+      default:
+        console.error("Command not found!");
+    }
+  });
+
+  function updateInfo() {
+    message2Background('update-info', {});
+  }
+
+  function changeInfo(info) {
+    setInfo(info);
+    localStorage.setItem('info', JSON.stringify(info));
   }
 
   return (
-    <TransactionsContext.Provider 
-      value={{ 
-        storedTransactions,
-        updateTransactions
+    <TransactionsContext.Provider
+      value={{
+        info,
+        changeInfo,
+        updateInfo
       }}>
       {children}
     </TransactionsContext.Provider>
