@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging --trace-warnings",
+    "test": "jest",
     "watch": "webpack --config webpack.common.js --watch"
   },
   "keywords": [],
@@ -31,6 +32,7 @@
     "babel-loader": "^8.2.2",
     "css-loader": "^5.2.4",
     "electron-reload": "^1.5.0",
+    "jest": "^26.6.3",
     "sass": "^1.32.11",
     "sass-loader": "^11.0.1",
     "style-loader": "^2.0.0",
