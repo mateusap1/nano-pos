@@ -5,41 +5,134 @@
   <body>
     <script>
 			const electron = require('electron');
-			const getTransactions = require('./src/background/manageDB').getTransactions;
-			
-			const ipcRenderer = electron.ipcRenderer;
+			const { ipcRenderer } = electron;
+			const WebSocket = require('ws');
 
-			let message2UI = (command, payload) => {
+			const { 
+				initializeDB,
+				getInfo,
+				insertItem,
+				deleteItem,
+				updateConfigs,
+				getConfigs
+			} = require('./src/background/manageDB');
+
+			const { startWatch } = require('./src/background/watch');
+
+			var socket;
+
+			const message2UI = (command, payload) => {
 				ipcRenderer.send('message-from-worker', {
 					command: command, payload: payload
 				});
 			}
 
-			message2UI('print', {
-				success: true,
-				message: 'Hidden Renderer okay yet'
-			});
-			
-			icpRenderer.send('hidden-renderer-ready');
+			const error = (message) => {
+				ipcRenderer.send('background-error', { message });
+			}
 
-			message2UI('print', {
-				success: true,
-				message: 'Hidden Renderer okay, waiting for response'
-			});
-
-			ipcRenderer.on('update-transactions', () => {
-				message2UI('print', {
-					success: true,
-					message: 'Hidden Renderer okay, waiting for response'
-				});
-
-				getTransactions(transactions => {
-					message2UI('update-transactions', {
-						success: true,
-						transactions
+			const updateInfo = (db) => {
+				getInfo(db)
+					.then((info) => {
+						message2UI('update-info', { 
+							info
+						});
 					});
-				})
-			})
+			}
+
+			const handleMessageFromMain = (_, arg) => {
+				const command = arg.command;
+				const payload = arg.payload;
+
+				initializeDB()
+					.then(db => {
+						switch (command) {
+							case 'update-info':
+
+								updateInfo(db);
+
+								ipcRenderer.removeListener(
+									'message-from-main', handleMessageFromMain);
+								break;
+
+							case 'insert-item':
+								const { id, name, price } = payload;
+
+								insertItem(db, parseInt(id), name, parseFloat(price));
+								updateInfo(db);
+
+								ipcRenderer.removeListener(
+									'message-from-main', handleMessageFromMain);
+								break;
+
+							case 'delete-item':
+								const dId = payload.id;
+
+								deleteItem(db, dId);
+								updateInfo(db);
+
+								ipcRenderer.removeListener(
+									'message-from-main', handleMessageFromMain);
+								break;
+
+							case 'watch':
+
+								getConfigs(db)
+									.then(configs => {
+										const address = configs.address;
+										const server = configs.wssServer;
+
+										// Setup WebSocket
+										socket = new WebSocket(server);
+
+										startWatch(db, socket, (data) => {
+											if (data.success) {
+												message2UI('receive-transaction', {
+													amount: data.amount / Math.pow(10, 30)
+												});
+											} else {
+												error(message);
+											}
+										});
+
+										ipcRenderer.removeListener(
+											'message-from-main', handleMessageFromMain);
+									})
+									.catch(err => {
+										error(err);
+
+										ipcRenderer.removeListener(
+											'message-from-main', handleMessageFromMain);
+									});
+								break;
+							
+							case 'stop-watch':
+
+								socket.terminate();
+
+								ipcRenderer.removeListener(
+									'message-from-main', handleMessageFromMain);
+								break;
+
+							case 'save-changes':
+								const { changes } = payload;
+
+								updateConfigs(db, changes);
+								
+								ipcRenderer.removeListener(
+									'message-from-main', handleMessageFromMain);
+								break;
+
+							default:
+								console.log('Hidden: Command not found!');
+						}
+					})
+					.catch((err) => {
+						console.log(err);
+					});
+			}
+
+			ipcRenderer.on('message-from-main', handleMessageFromMain);
 		</script>
   </body>
 </html>
