@@ -1,7 +1,7 @@
 const dateFormat = require('dateformat');
 
 
-function convertUnixToDateString(time) {
+function convertUnixToDateAndHour(time) {
   const timeString = dateFormat(time, 'mmm dd, yyyy\nhh:MM TT');
 
   return {
@@ -10,4 +10,8 @@ function convertUnixToDateString(time) {
   };
 }
 
-module.exports = { convertUnixToDateString }
+function convertUnixToDate(time) {
+  return dateFormat(time, 'dd-mm-yyyy');
+}
+
+module.exports = { convertUnixToDateAndHour, convertUnixToDate };
