@@ -5,8 +5,8 @@ getting-started-developing-with-nano-currency-part-2-interacting-with-public-
 and-private-nano-adb98ef57fbf*/
 
 // https://nault.nanos.cc/proxy/
-RPC_SERVER='https://mynano.ninja/api/node/';
-REQUEST_TIMEOUT=10*1000; // 10 seconds
+const RPC_SERVER='https://mynano.ninja/api/node/';
+const REQUEST_TIMEOUT=10*1000; // 10 seconds
 
 // Send a POST request and return a Promise
 async function post(url, params) {
@@ -36,7 +36,7 @@ async function post(url, params) {
   });
 }
 
-function accountBalance(address, rpcServer=RPC_SERVER) {
+async function accountBalance(address, rpcServer) {
   input = {
     action: 'account_balance',
     account: address
@@ -53,7 +53,7 @@ function accountBalance(address, rpcServer=RPC_SERVER) {
   });
 }
 
-function accountHistory(address, head=null, rpcServer=RPC_SERVER) {
+async function accountHistory(address, rpcServer, head=null) {
   if (head === null) {
     input = {
       action: 'account_history',
@@ -80,7 +80,7 @@ function accountHistory(address, head=null, rpcServer=RPC_SERVER) {
   });
 }
 
-function accountInfo(address, rpcServer=RPC_SERVER) {
+async function accountInfo(address, rpcServer) {
   input = {
     action: 'account_info',
     account: address
@@ -99,7 +99,7 @@ function accountInfo(address, rpcServer=RPC_SERVER) {
 
 async function test() {
   const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
-  accountHistory(address).then((response) => console.log(response));
+  accountInfo(address, RPC_SERVER).then((response) => console.log(response));
 }
 
 module.exports = { accountBalance, accountHistory, accountInfo };

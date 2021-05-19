@@ -34,7 +34,11 @@ db.serialize(() => {
     CREATE TABLE items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
-      price REAL
+      description TEXT,
+      barcode INTEGER,
+      category TEXT,
+      price REAL,
+      extra TEXT
     );`
   );
 

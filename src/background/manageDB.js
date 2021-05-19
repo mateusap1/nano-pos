@@ -18,10 +18,12 @@ async function initializeDB() {
       .catch(err => {
         return reject(err);
       });
-  })
+  });
 }
 
 async function getConfigs(db) {
+  // Return the global settings added
+
   return new Promise((resolve, reject) => {
     db.all(`
       SELECT section_name, setting_name, setting_value, setting_type
@@ -41,6 +43,7 @@ async function getConfigs(db) {
 
 async function addConfig(
   db, sectionName, settingName, settingValue, setting_type) {
+  //  Insert the settings into the database
 
   await db.run(`
     INSERT INTO global_config
@@ -50,6 +53,8 @@ async function addConfig(
 }
 
 async function updateConfigs(db, configs) {
+  // Update the settings from the database
+
   for (config of configs) {
     let { setting, value } = config;
 
@@ -62,23 +67,39 @@ async function updateConfigs(db, configs) {
   }
 }
 
-async function deleteConfigs(db, id) {
+async function deleteConfigs(db) {
+  // Delete any settings inside the database
+
   await db.run("DELETE FROM global_config;");
 }
 
-async function insertItem(db, id, name, price) {
+async function insertItem(
+  db, id, name, description, barcode, category, price, extra) {
+  // Insert the items into the database
+    
   await db.run(
-    "INSERT INTO items (id, name, price) VALUES (?, ?, ?);", 
-    [id, name, price]
+    `INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (?, ?, ?, ?, ?, ?, ?);`, 
+    [id, name, description, barcode, category, price, extra]
   );
 }
 
 async function deleteItem(db, id) {
-  await db.run("DELETE FROM items WHERE id = ?;", [id]);
+  // Delete item with the corresponding ID
 
+  await db.run("DELETE FROM items WHERE id = ?;", [id]);
 }
 
 async function deleteItems(db) {
+  // Delete any items inside the database
+
   await db.run("DELETE FROM items;");
 }
 
@@ -88,7 +109,9 @@ async function insertTransaction(db, hash, account, amount, date, type) {
 }
 
 async function syncTransactions(db) {
-  const { address } = await getConfigs(db);
+  // Add all new transactions to the database
+
+  const { address, rpcServer } = await getConfigs(db);
 
   const rows = await db.all(`
     SELECT hash 
@@ -96,39 +119,28 @@ async function syncTransactions(db) {
     WHERE account = :account;
   `, {':account': address});
 
-  accountInfo(address)
-    .then((info) => {
-      const head = info.confirmation_height_frontier;
+  const info = await accountInfo(address, rpcServer);
+  const head = info.confirmation_height_frontier;
 
-      accountHistory(address, head)
-        .then((info) => {
-          const { history } = info;
+  const { history } = await accountHistory(address, rpcServer, head);
 
-          for (block of history) {
-            if (!rows.some(row => row.hash === block.hash)) {
-              insertTransaction(
-                db,
-                block.hash, 
-                address, 
-                block.amount, 
-                block.local_timestamp, 
-                block.type === 'send' ? 0 : 1
-              ).catch((e) => console.log(e));
-            }
-          }
-        })
-        .catch(err => {
-          console.log(err);
-          return;
-        });
-    })
-    .catch(err => {
-    console.log(err);
-    return;
-    });
+  for (block of history) {
+    if (!rows.some(row => row.hash === block.hash)) {
+      insertTransaction(
+        db,
+        block.hash,
+        address,
+        block.amount,
+        block.local_timestamp,
+        block.type === 'send' ? 0 : 1
+      ).catch((e) => console.log(e));
+    }
+  }
 }
 
 async function getInfo(db) {
+  // Get all essential information and return it
+
   var prettyTransactions = []; // Formatted in a user-readable way
   var rawTransactions = []; // The content exactly as it is
 
@@ -144,42 +156,28 @@ async function getInfo(db) {
     ORDER BY date DESC;
   `, {':account': address});
   
-  const settingsDB = await db.all('SELECT * FROM global_config;');
-
-  let settings = {};
-  for (settingInfo of settingsDB) {
-    settings[settingInfo.setting_name] = settingInfo.setting_value;
-  }
-
+  const settings = await getConfigs(db);
   const currency = settings.currency;
 
   const currentNanoPrice = await getNanoPrice(
     currency, convertUnixToDate(Date.now()));
-  
-  await db.run(`
-    INSERT INTO nano_price (
-      currency, price, date
-    ) VALUES (
-      ?, ?, ?
-    )`, 
-    [currency, currentNanoPrice, Math.floor(Date.now()/1000)]
-  )
 
   const rawItems = await db.all("SELECT * FROM items;");
   const prettyItems = [];
 
   for (let i = 0; i < rawItems.length; i++) {
-    // Format prices
-
     prettyItems.push({
       id: rawItems[i].id,
       name: rawItems[i].name,
+      description: rawItems[i].description,
+      barcode: rawItems[i].barcode,
+      category: rawItems[i].category,
       price: rawItems[i].price.toLocaleString(undefined, { 
         minimumFractionDigits: 2, 
         minimumIntegerDigits: 2
-      })
+      }),
+      extra: rawItems[i].extra
     });
-
   }
   
   for (transaction of pureTransactions) {
@@ -231,7 +229,7 @@ async function getInfo(db) {
     const prettyDate = convertUnixToDateAndHour(date*1000);
     const prettyType = type === 0 ? 'Send' : 'Receive';
 
-    amounts = {
+    rawAmount = {
       nano: amount,
       currency: price
     };
@@ -242,7 +240,7 @@ async function getInfo(db) {
       amount: prettyAmount, 
       type: prettyType
     });
-    rawTransactions.push({hash, date, amounts, type});
+    rawTransactions.push({hash, date, amount: rawAmount, type});
 
     balanceTotal += amount;
 
@@ -280,23 +278,22 @@ async function getInfo(db) {
 }
 
 async function deleteTransactions(db) {
+  // Delete any transactions inside the database
+  
   await db.run("DELETE FROM transactions;");
 }
 
-const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
-// initializeDB().then(db => {
-//   // syncTransactions(db, address).catch(err => console.log(err));
-//   // addConfig(db, 'userInfo', 'address', 
-//   //   'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7', 0);
-
-// });
-
 module.exports = { 
-  initializeDB, 
-  insertItem,
-  deleteItem, 
-  insertTransaction, 
-  getInfo, 
+  initializeDB,
+  getConfigs,
+  addConfig,
   updateConfigs,
-  getConfigs
+  deleteConfigs,
+  insertItem,
+  deleteItem,
+  deleteItems,
+  insertTransaction,
+  syncTransactions,
+  getInfo,
+  deleteTransactions
 };
