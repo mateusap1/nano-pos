@@ -1,15 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const url = require('url');
 
 let mainWindow;
 let hiddenWindow;
-
-let mainWindowReady = false;
-let hiddenWindowReady = false;
-
-let mainQueue = [];
-let hiddenQueue = [];
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -40,7 +34,27 @@ function createWindow() {
 }
 
 require('electron-reload')(__dirname, {
-  electron: path.join(__dirname, 'node-modules', '.bin', 'electron')
+  electron: path.join(__dirname, 'node-modules', '.bin', 'electron'),
+  ignored: /db|[\/\\]\./
+});
+
+app.allowRendererProcessReuse = false;
+process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  })
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })
 
 function sendWindowMessage(targetWindow, message, payload) {
@@ -50,53 +64,28 @@ function sendWindowMessage(targetWindow, message, payload) {
   }
 
 	targetWindow.webContents.send(message, payload);
-  console.log(`Message sent via ${message}`);
 }
 
-app.whenReady().then(() => {
-  createWindow();
-}).catch(e => {
-  console.error(e);
-});
-
-ipcMain.on('main-renderer-ready', () => {
-  mainWindowReady = true;
-
-  for (fun of mainQueue) {
-    fun();
-  }
-});
-
-ipcMain.on('hidden-renderer-ready', () => {
-  hiddenWindowReady = true;
-
-  for (fun of hiddenQueue) {
-    fun();
-  }
-});
-
 ipcMain.on('update-transactions', () => {
-  console.log('Main Ready -> update-transactions');
-
-  if (hiddenWindowReady) {
-    console.log('Hidden Ready -> update-transactions');
+  ipcMain.on('hidden-renderer-ready', () => {
     sendWindowMessage(hiddenWindow, 'update-transactions');
-  } else {
-    hiddenQueue.push(() => {
-      console.log('Hidden Ready -> update-transactions');
-      sendWindowMessage(hiddenWindow, 'update-transactions');
-    });
-  }
+  });
+})
+
+ipcMain.on('message-from-main', (_, arg) => {
+  sendWindowMessage(hiddenWindow, 'message-from-main', arg);
 })
 
 ipcMain.on('message-from-worker', (_, arg) => {
-  if (mainWindowReady) {
-    console.log('Main Ready -> message-from-worker');
-    sendWindowMessage(mainWindow, 'message-from-worker', arg);
-  } else {
-    mainQueue.push(() => {
-      console.log('Main Ready -> message-from-worker');
-      sendWindowMessage(mainWindow, 'message-from-worker', arg);
-    });
-  }
+  sendWindowMessage(mainWindow, 'message-from-worker', arg);
+})
+
+ipcMain.on('background-error', (_, arg) => {
+  const { message } = arg;
+
+  dialog.showMessageBox(mainWindow, { 
+    message,
+    type: 'error',
+    buttons: ['Ok']
+  });
 })
