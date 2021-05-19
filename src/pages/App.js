@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { HashRouter, Route, Switch, Redirect } from 'react-router-dom';
 
 import { TransactionsContextProvider } from '../contexts/TransactionsContext';
+import { message2Background } from '../utils/messageToBackground';
 
 import Transactions from './transactions/transactions';
 import ProductsAndServices from './productsAndServices/productsAndServices';
@@ -12,6 +13,10 @@ import Settings from './settings/settings';
 import '../styles/global.scss';
 
 export default function() {
+  useEffect(() => {
+    message2Background('update-info', {});
+  }, []);
+  
   return (
     <TransactionsContextProvider>
       <HashRouter>

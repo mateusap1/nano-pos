@@ -2,6 +2,32 @@ div .mainContent {
   margin-left: 250px;
   padding: 25px;
 
+  .voidContent {
+    display: flex;
+    justify-content: center;
+
+    .rotate {
+      animation: rotation infinite 3s linear;
+    }
+
+    @keyframes rotation{
+      from{
+        transform:rotate(0deg);
+      }
+    
+      to{
+        transform:rotate(360deg);
+      }
+    }
+
+    span {
+      padding: 10px;
+      font-size: 22px;
+      color: var(--gray-600);
+      text-align: center;
+    }
+  }
+
   table {
     margin-left: auto;
     margin-right: auto;
@@ -30,6 +56,14 @@ div .mainContent {
         td {
           text-align: center;
           padding: 10px;
+
+          &:first-child {
+            border-radius: 5px 0 0 5px;
+          }
+
+          &:last-child {
+            border-radius: 0 5px 5px 0;
+          }
 
           span:first-child {
             font-size: 22px;
