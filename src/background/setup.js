@@ -55,6 +55,46 @@ db.serialize(() => {
     );`
   );
 
+  db.run(`
+    CREATE TABLE nano_price (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      currency TEXT,
+      price REAL,
+      date INTEGER
+    );`
+  );
+
+  db.run('DELETE FROM global_config;');
+
+  db.run(`
+    INSERT INTO global_config (
+      section_name, 
+      setting_name, 
+      setting_value, 
+      setting_type
+    ) VALUES (?, ?, ?, ?);`, 
+    ['nodes', 'rpcNode', 'https://mynano.ninja/api/node/', 'string']
+  );
+
+  db.run(`
+    INSERT INTO global_config (
+      section_name, 
+      setting_name, 
+      setting_value, 
+      setting_type
+    ) VALUES (?, ?, ?, ?);`, 
+    ['nodeRelated', 'wssServer', 'wss://ws.mynano.ninja/', 'string']
+  );
+
+  db.run(`
+    INSERT INTO global_config (
+      section_name, 
+      setting_name, 
+      setting_value, 
+      setting_type
+    ) VALUES (?, ?, ?, ?);`, 
+    ['moneyRelated', 'currency', 'usd', 'string']
+  );
 });
 
 db.close((err) => {

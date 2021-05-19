@@ -1,67 +1,302 @@
-const sqlite3 = require('sqlite3').verbose();
-const { convertUnixToDateString } = require('../utils/convertUnixToDateString');
+const sqlite3 = require('sqlite3');
+const { open } = require('sqlite');
+
+const { convertUnixToDateAndHour, convertUnixToDate } = require('../utils/manageDates');
+const { getNanoPrice } = require('../utils/getNanoPrice');
+const { accountHistory, accountInfo } = require('./nanoRPC');
 
 
-function initializeDB() {
-  return new sqlite3.Database('./db/pos.db', (err) => {
-    if (err) {
-      console.error(err.message);
-    }
-  
-    console.log('Connected to the database.');
-  });
+async function initializeDB() {
+  return new Promise((resolve, reject) => {
+    open({
+      filename: './db/pos.db',
+      driver: sqlite3.Database
+    })
+      .then(db => {
+        return resolve(db);
+      })
+      .catch(err => {
+        return reject(err);
+      });
+  })
 }
 
-function closeDB(db) {
-  db.close((err) => {
-    if (err) {
-      return console.error(err.message);
-    }
-  
-    console.log('Close the database connection.');
-  });
-}
+async function getConfigs(db) {
+  return new Promise((resolve, reject) => {
+    db.all(`
+      SELECT section_name, setting_name, setting_value, setting_type
+      FROM global_config;
+    `).then(configs => {
+      let result = {};
+      for (config of configs) {
+        result[config.setting_name] = config.setting_value;
+      }
 
-function insertTransaction(hash, account, amount, date, type) {
-  let db = initializeDB();
-
-  db.run("INSERT INTO transactions VALUES (?, ?, ?, ?, ?);",
-          [hash, account, amount, date, type]);
-
-  closeDB(db);
-}
-
-function getTransactions(callback, pretty = true) {
-  let db = initializeDB();
-  var transactions = [];
-
-  db.each("SELECT hash, amount, date, type FROM transactions", function(err, row) {
-    if (err) {
-      return console.error(err.message);
-    }
-
-    if (pretty === true) {
-      var amount = row.amount / Math.pow(10, 30);
-      var date = convertUnixToDateString(row.date*1000);
-    } else {
-      var amount = row.amount;
-      var date = row.date;
-    }
-
-    transactions.push({
-      hash: row.hash,
-      date,
-      amount,
-      type: pretty ? row.type[0].toUpperCase() + row.type.slice(1) : row.type
+      return resolve(result);
+    }).catch(err => {
+      return reject(err);
     });
-  }, () => {
-    closeDB(db);
-    callback(transactions);
   });
 }
 
-getTransactions((transactions) => {
-  console.log(transactions);
-})
+async function addConfig(
+  db, sectionName, settingName, settingValue, setting_type) {
 
-module.exports = { insertTransaction, getTransactions };
+  await db.run(`
+    INSERT INTO global_config
+    (section_name, setting_name, setting_value, setting_type)
+    VALUES (?, ?, ?, ?);
+  `, [sectionName, settingName, settingValue, setting_type]);
+}
+
+async function updateConfigs(db, configs) {
+  for (config of configs) {
+    let { setting, value } = config;
+
+    await db.run(`
+      UPDATE global_config 
+      SET setting_value = ?
+      WHERE setting_name = ?;`, 
+      [value, setting]
+    );
+  }
+}
+
+async function deleteConfigs(db, id) {
+  await db.run("DELETE FROM global_config;");
+}
+
+async function insertItem(db, id, name, price) {
+  await db.run(
+    "INSERT INTO items (id, name, price) VALUES (?, ?, ?);", 
+    [id, name, price]
+  );
+}
+
+async function deleteItem(db, id) {
+  await db.run("DELETE FROM items WHERE id = ?;", [id]);
+
+}
+
+async function deleteItems(db) {
+  await db.run("DELETE FROM items;");
+}
+
+async function insertTransaction(db, hash, account, amount, date, type) {
+  await db.run("INSERT INTO transactions VALUES (?, ?, ?, ?, ?);",
+    [hash, account, amount, date, type]);
+}
+
+async function syncTransactions(db) {
+  const { address } = await getConfigs(db);
+
+  const rows = await db.all(`
+    SELECT hash 
+    FROM transactions 
+    WHERE account = :account;
+  `, {':account': address});
+
+  accountInfo(address)
+    .then((info) => {
+      const head = info.confirmation_height_frontier;
+
+      accountHistory(address, head)
+        .then((info) => {
+          const { history } = info;
+
+          for (block of history) {
+            if (!rows.some(row => row.hash === block.hash)) {
+              insertTransaction(
+                db,
+                block.hash, 
+                address, 
+                block.amount, 
+                block.local_timestamp, 
+                block.type === 'send' ? 0 : 1
+              ).catch((e) => console.log(e));
+            }
+          }
+        })
+        .catch(err => {
+          console.log(err);
+          return;
+        });
+    })
+    .catch(err => {
+    console.log(err);
+    return;
+    });
+}
+
+async function getInfo(db) {
+  var prettyTransactions = []; // Formatted in a user-readable way
+  var rawTransactions = []; // The content exactly as it is
+
+  var balanceTotal = 0;
+  var balanceToday = 0;
+
+  const { address } = await getConfigs(db);
+
+  const pureTransactions = await db.all(`
+    SELECT hash, amount, date, type 
+    FROM transactions 
+    WHERE account = :account
+    ORDER BY date DESC;
+  `, {':account': address});
+  
+  const settingsDB = await db.all('SELECT * FROM global_config;');
+
+  let settings = {};
+  for (settingInfo of settingsDB) {
+    settings[settingInfo.setting_name] = settingInfo.setting_value;
+  }
+
+  const currency = settings.currency;
+
+  const currentNanoPrice = await getNanoPrice(
+    currency, convertUnixToDate(Date.now()));
+  
+  await db.run(`
+    INSERT INTO nano_price (
+      currency, price, date
+    ) VALUES (
+      ?, ?, ?
+    )`, 
+    [currency, currentNanoPrice, Math.floor(Date.now()/1000)]
+  )
+
+  const rawItems = await db.all("SELECT * FROM items;");
+  const prettyItems = [];
+
+  for (let i = 0; i < rawItems.length; i++) {
+    // Format prices
+
+    prettyItems.push({
+      id: rawItems[i].id,
+      name: rawItems[i].name,
+      price: rawItems[i].price.toLocaleString(undefined, { 
+        minimumFractionDigits: 2, 
+        minimumIntegerDigits: 2
+      })
+    });
+
+  }
+  
+  for (transaction of pureTransactions) {
+    let { hash, amount, date, type } = transaction;
+
+    const parsedDate = convertUnixToDate(date*1000);
+
+    const cachedNanoPrice = await db.get(
+      'SELECT price FROM nano_price WHERE date = ? AND currency = ?',
+      [date, currency]
+    );
+
+    if (cachedNanoPrice) {
+      var nanoPrice = cachedNanoPrice.price;
+    } else {
+      var nanoPrice = await getNanoPrice(currency, parsedDate);
+      await db.run(`
+        INSERT INTO nano_price (
+          currency, price, date
+        ) VALUES (
+          ?, ?, ?
+        )`,
+        [currency, nanoPrice, date]
+      );
+    }
+
+    const convertedAmount = Math.round(
+      ((amount / Math.pow(10, 30)) + Number.EPSILON) * 100) / 100;
+    const parsedAmount = convertedAmount.toLocaleString(undefined, { 
+      minimumFractionDigits: 2, 
+      minimumIntegerDigits: 2
+    });
+  
+    if (convertedAmount === 0) {
+      continue;
+    }
+
+    const price = nanoPrice * convertedAmount;
+    const roundPrice = Math.round((price + Number.EPSILON) * 100) / 100;
+    const parsedPrice = roundPrice ? `${roundPrice.toLocaleString(undefined, { 
+      minimumFractionDigits: 2, 
+      minimumIntegerDigits: 2
+    })} ${currency.toUpperCase()}` : 'Unknown';
+
+    const prettyAmount = {
+      nano: parsedAmount,
+      currency: parsedPrice
+    };
+    const prettyDate = convertUnixToDateAndHour(date*1000);
+    const prettyType = type === 0 ? 'Send' : 'Receive';
+
+    amounts = {
+      nano: amount,
+      currency: price
+    };
+
+    prettyTransactions.push({
+      hash, 
+      date: prettyDate, 
+      amount: prettyAmount, 
+      type: prettyType
+    });
+    rawTransactions.push({hash, date, amounts, type});
+
+    balanceTotal += amount;
+
+    if (new Date(date*1000)
+        .setHours(0, 0, 0, 0) === new Date().setHours(0, 0, 0, 0)) {
+      balanceToday += amount;
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    return resolve({
+      loading: false,
+      settings,
+      currentNanoPrice,
+      balance: {
+        total: (Math.round((
+          balanceTotal / Math.pow(10, 30) + Number.EPSILON) * 100) / 100)
+            .toLocaleString(undefined, { 
+              minimumFractionDigits: 2, 
+              minimumIntegerDigits: 2
+            }),
+        today: (Math.round((
+          balanceToday / Math.pow(10, 30) + Number.EPSILON) * 100) / 100)
+            .toLocaleString(undefined, { 
+              minimumFractionDigits: 2, 
+              minimumIntegerDigits: 2
+            }),
+      },
+      prettyTransactions,
+      rawTransactions,
+      prettyItems,
+      rawItems
+    });
+  })
+}
+
+async function deleteTransactions(db) {
+  await db.run("DELETE FROM transactions;");
+}
+
+const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
+// initializeDB().then(db => {
+//   // syncTransactions(db, address).catch(err => console.log(err));
+//   // addConfig(db, 'userInfo', 'address', 
+//   //   'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7', 0);
+
+// });
+
+module.exports = { 
+  initializeDB, 
+  insertItem,
+  deleteItem, 
+  insertTransaction, 
+  getInfo, 
+  updateConfigs,
+  getConfigs
+};
