@@ -108,10 +108,11 @@ async function insertTransaction(db, hash, account, amount, date, type) {
     [hash, account, amount, date, type]);
 }
 
-async function syncTransactions(db) {
+async function syncTransactions(db, address) {
   // Add all new transactions to the database
 
-  const { address, rpcServer } = await getConfigs(db);
+  const config = await getConfigs(db);
+  const rpcServer = config.rpcNode;
 
   const rows = await db.all(`
     SELECT hash 
@@ -138,7 +139,7 @@ async function syncTransactions(db) {
   }
 }
 
-async function getInfo(db) {
+async function getInfo(db, address) {
   // Get all essential information and return it
 
   var prettyTransactions = []; // Formatted in a user-readable way
@@ -146,8 +147,6 @@ async function getInfo(db) {
 
   var balanceTotal = 0;
   var balanceToday = 0;
-
-  const { address } = await getConfigs(db);
 
   const pureTransactions = await db.all(`
     SELECT hash, amount, date, type 

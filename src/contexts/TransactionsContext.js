@@ -14,7 +14,7 @@ export function TransactionsContextProvider({ children }) {
       JSON.parse(localStorage.getItem('info'))
     ) : {
       loading: true,
-      settings: {rpcNode: "", wssServer: "", currency: "usd", address: "Unknown"},
+      settings: {rpcNode: "", wssServer: "", currency: "usd"},
       balance: { total: null, today: null },
       prettyTransactions: [],
       rawTransactions: [],

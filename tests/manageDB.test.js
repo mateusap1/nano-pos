@@ -378,12 +378,14 @@ it('Should add all new transactions to the database', async () => {
   db = await initializeDB();
   await addEssentialConfigs(db);
 
-  await syncTransactions(db);
+  const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
+
+  await syncTransactions(db, address);
   
   const result = await db.all('SELECT * FROM transactions;');
   const expectedOutput = [{
     hash: '324D62BFB7C4F9934AED588AD9153508307907B1191454098201E7EA692F654B',
-    account: 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7',
+    account: address,
     amount: 10000000000000000000000000000,
     type: 1
   }];
@@ -419,6 +421,8 @@ it('Should get all essential information and return it', async () => {
       extra
     ) VALUES (0, 'test', 'test', 'test', 'test', 0, 'test');
   `);
+
+  const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
 
   const expectedSettings = {
     rpcNode: 'https://mynano.ninja/api/node/',
@@ -486,7 +490,7 @@ it('Should get all essential information and return it', async () => {
     rawItems: expectedRawItems
   };
 
-  const result = await getInfo(db);
+  const result = await getInfo(db, address);
   expect(result).toMatchObject(expectedOutput);
 });
 

@@ -33,8 +33,13 @@
 			}
 
 			const updateInfo = async (db) => {
-				// await syncTransactions(db);
-				getInfo(db)
+				const address = localStorage.getItem('address');
+				if (!address) {
+					return;
+				}
+
+				await syncTransactions(db, address);
+				getInfo(db, address)
 					.then((info) => {
 						message2UI('update-info', { 
 							info

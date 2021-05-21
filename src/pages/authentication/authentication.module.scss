@@ -1,0 +1,27 @@
+div .mainContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+
+  div {
+    label {
+      text-align: center;
+    }
+
+    label, textarea {
+      color: var(--gray-600);
+      font-size: 22px;
+      display: block;
+      overflow-y: hidden;
+    }
+  
+    textarea {
+      margin-top: 20px;
+      padding: 4px;
+      margin-left: 20px;
+      border-radius: 5px;
+      border: 1px solid;
+    }
+  }
+}
