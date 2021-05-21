@@ -35,7 +35,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
       description TEXT,
-      barcode INTEGER,
+      barcode TEXT,
       category TEXT,
       price REAL,
       extra TEXT

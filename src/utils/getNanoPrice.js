@@ -18,5 +18,4 @@ async function getNanoPrice(currency, date) {
   });
 }
 
-
 module.exports = { getNanoPrice };

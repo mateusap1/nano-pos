@@ -5,6 +5,7 @@ const url = require('url');
 let mainWindow;
 let hiddenWindow;
 
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,

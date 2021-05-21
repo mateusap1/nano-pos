@@ -10,6 +10,7 @@
 
 			const { 
 				initializeDB,
+				syncTransactions,
 				getInfo,
 				insertItem,
 				deleteItem,
@@ -31,7 +32,8 @@
 				ipcRenderer.send('background-error', { message });
 			}
 
-			const updateInfo = (db) => {
+			const updateInfo = async (db) => {
+				// await syncTransactions(db);
 				getInfo(db)
 					.then((info) => {
 						message2UI('update-info', { 
@@ -50,19 +52,16 @@
 							case 'update-info':
 
 								updateInfo(db);
-
-								ipcRenderer.removeListener(
-									'message-from-main', handleMessageFromMain);
 								break;
 
 							case 'insert-item':
-								const { id, name, price } = payload;
+								const { 
+									id, name, price, description, barcode, category, extra
+								} = payload;
 
-								insertItem(db, parseInt(id), name, parseFloat(price));
+								insertItem(
+									db, id, name, description, barcode, category, price, extra);
 								updateInfo(db);
-
-								ipcRenderer.removeListener(
-									'message-from-main', handleMessageFromMain);
 								break;
 
 							case 'delete-item':
@@ -70,9 +69,6 @@
 
 								deleteItem(db, dId);
 								updateInfo(db);
-
-								ipcRenderer.removeListener(
-									'message-from-main', handleMessageFromMain);
 								break;
 
 							case 'watch':
@@ -109,18 +105,13 @@
 							case 'stop-watch':
 
 								socket.terminate();
-
-								ipcRenderer.removeListener(
-									'message-from-main', handleMessageFromMain);
 								break;
 
 							case 'save-changes':
 								const { changes } = payload;
 
 								updateConfigs(db, changes);
-								
-								ipcRenderer.removeListener(
-									'message-from-main', handleMessageFromMain);
+							
 								break;
 
 							default:
