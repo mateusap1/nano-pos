@@ -3,14 +3,36 @@ div .mainContent {
   padding: 50px 150px;
   color: var(--gray-600);
 
-  .container {
-    // display: flex;
-    // justify-content: space-between;
+  .voidContent {
+    display: flex;
+    justify-content: center;
 
+    .rotate {
+      animation: rotation infinite 3s linear;
+    }
+
+    @keyframes rotation{
+      from{
+        transform:rotate(0deg);
+      }
+    
+      to{
+        transform:rotate(360deg);
+      }
+    }
+
+    span {
+      padding: 10px;
+      font-size: 22px;
+      color: var(--gray-600);
+      text-align: center;
+    }
+  }
+
+  .container {
     .containerItem {
       display: flex;
       justify-content: space-between;
-      // align-items: center;
 
       label {
         font-size: 22px;

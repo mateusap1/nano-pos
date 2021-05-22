@@ -33,6 +33,8 @@
 			}
 
 			const updateInfo = async (db) => {
+				message2UI('set-loading', {value: true});
+				
 				const address = localStorage.getItem('address');
 				if (!address) {
 					return;

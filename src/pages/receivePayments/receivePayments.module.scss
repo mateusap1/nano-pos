@@ -2,6 +2,11 @@ div .mainContent {
   margin-left: 250px;
   padding: 25px;
 
+  .voidContent {
+    display: flex;
+    justify-content: center;
+  }
+
   .searchBar {
     display: flex;
     justify-content: center;

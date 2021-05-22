@@ -9,8 +9,43 @@ const { ipcRenderer } = electron;
 
 
 export function TransactionsContextProvider({ children }) {
-  let [info, setInfo] = useState(
-    JSON.parse(localStorage.getItem('info')) ? (
+  let [info, setInfo] = useState(initializeInfo());
+
+  ipcRenderer.on('message-from-worker', (_, arg) => {
+    const command = arg.command;
+    const payload = arg.payload;
+
+    switch (command) {
+      case 'set-loading':
+        const { value } = payload;
+        const tempInfo = {...info};
+
+        tempInfo.loading = value;
+        changeInfo(tempInfo);
+
+        break;
+
+      case 'update-info':
+        const { info } = payload;
+
+        setInfo(info);
+        localStorage.setItem('info', JSON.stringify(info));
+
+        break;
+
+      case 'print':
+        const { message } = payload;
+
+        console.log(message);
+        break;
+
+      default:
+        console.error("Command not found!");
+    }
+  });
+
+  function initializeInfo() {
+    let tempInfo = JSON.parse(localStorage.getItem('info')) ? (
       JSON.parse(localStorage.getItem('info'))
     ) : {
       loading: true,
@@ -20,30 +55,11 @@ export function TransactionsContextProvider({ children }) {
       rawTransactions: [],
       prettyItems: [],
       rawItems: []
-    }
-  );
+    };
 
-  ipcRenderer.on('message-from-worker', (_, arg) => {
-    const command = arg.command;
-    const payload = arg.payload;
-
-    switch (command) {
-      case 'update-info':
-        const { info } = payload;
-        setInfo(info);
-        localStorage.setItem('info', JSON.stringify(info));
-
-        break;
-
-      case 'print':
-        const { message } = payload;
-        console.log(message);
-        break;
-
-      default:
-        console.error("Command not found!");
-    }
-  });
+    tempInfo.loading = true;
+    return tempInfo;
+  }
 
   function updateInfo() {
     message2Background('update-info', {});

@@ -28,9 +28,13 @@ export default function ProductsAndServices() {
   const categoryRef = useRef(null);
   const extraRef = useRef(null);
 
-  let [items, setItems] = useState(info.prettyItems);
+  let [items, setItems] = useState(info?.prettyItems || []);
   let [active, setActive] = useState(false);
   let [overlayContent, setOverlayContent] = useState(<></>);
+
+  useEffect(() => {
+    setItems(info?.prettyItems || []);
+  }, [info]);
 
   const insertItem = () => {
     const id = idRef.current.value;
