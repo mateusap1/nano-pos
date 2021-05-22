@@ -111,6 +111,7 @@
 							
 							case 'stop-watch':
 
+								console.log('beep');
 								socket.terminate();
 								break;
 
@@ -130,7 +131,9 @@
 					});
 			}
 
-			ipcRenderer.on('message-from-main', handleMessageFromMain);
+			ipcRenderer.on('message-from-main', (_, arg) => {
+				handleMessageFromMain(_, arg);
+			});
 		</script>
   </body>
 </html>
