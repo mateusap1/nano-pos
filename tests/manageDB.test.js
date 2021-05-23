@@ -1,6 +1,9 @@
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 
+jest.mock('../src/background/nanoRPC');
+jest.mock('../src/utils/getNanoPrice');
+
 const { 
   getConfigs,
   addConfig,
@@ -14,9 +17,6 @@ const {
   getInfo,
   deleteTransactions
 } = require('../src/background/manageDB');
-
-jest.mock('../src/background/nanoRPC');
-jest.mock('../src/utils/getNanoPrice');
 
 
 // Helper functions
@@ -506,5 +506,88 @@ it('Should delete any transactions inside the database', async () => {
   await deleteTransactions(db);
 
   const result = await db.all('SELECT * FROM transactions;');
+  expect(result).toEqual([]);
+});
+
+it('Should insert the items of a csv file into the database', async () => {
+  /* The following issue may help with any problems regarding manual mocks of
+  submodules: https://github.com/facebook/jest/issues/11136#issuecomment-793481624 
+  */
+
+  jest.mock('fs');
+  jest.mock('fs/promises');
+
+  const fs = require('fs');
+
+  fs.setMockFiles({
+    './test1.csv': `
+      "id","name","category","price"
+      "1","name1","category1","1.1"
+      "2","name2","category2","2.2"
+    `,
+    './test2.csv': `
+      "id","category","price"
+      "1","category1","1.1"
+      "2","category2","2.2"
+    `
+  });
+
+  const { insertItemsCSV } = require('../src/background/manageCSV');
+
+  db = await initializeDB();
+
+  await db.exec(`
+    INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (0, 'test0', 'test0', 'test0', 'test0', 0, 'test0');
+  `);
+
+  await insertItemsCSV(db, './test1.csv');
+
+  const expectedOutput = [
+    {
+      id: 0,
+      name: 'test0',
+      description: 'test0',
+      barcode: 'test0',
+      category: 'test0',
+      price: 0,
+      extra: 'test0'
+    }, {
+      id: 1,
+      name: 'name1',
+      description: null,
+      barcode: null,
+      category: 'category1',
+      price: 1.1,
+      extra: null
+    }, {
+      id: 2,
+      name: 'name2',
+      description: null,
+      barcode: null,
+      category: 'category2',
+      price: 2.2,
+      extra: null
+    }
+  ];
+
+  let result = await db.all('SELECT * FROM items;');
+
+  expect(result).toHaveLength(3);
+  for (let i = 0; i < result.length; i++) {
+    expect(result[i]).toEqual(expect.objectContaining(expectedOutput[i]));
+  }
+
+  await db.exec('DELETE FROM items;');
+  await insertItemsCSV(db, './test2.csv');
+
+  result = await db.all('SELECT * FROM items;');
   expect(result).toEqual([]);
 });
