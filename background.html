@@ -18,6 +18,7 @@
 				getConfigs
 			} = require('./src/background/manageDB');
 
+			const { insertItemsCSV } = require('./src/background/manageCSV');
 			const { startWatch } = require('./src/background/watch');
 
 			var socket;
@@ -59,6 +60,12 @@
 							case 'update-info':
 
 								updateInfo(db);
+								break;
+
+							case 'import-csv':
+								const { csvPath } = payload;
+
+								insertItemsCSV(db, csvPath);
 								break;
 
 							case 'insert-item':
