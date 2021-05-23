@@ -78,7 +78,7 @@ async function insertItem(
   // Insert the items into the database
     
   await db.run(
-    `INSERT INTO items (
+    `INSERT OR IGNORE INTO items (
       id,
       name,
       description,
@@ -158,8 +158,7 @@ async function getInfo(db, address) {
   const settings = await getConfigs(db);
   const currency = settings.currency;
 
-  const currentNanoPrice = await getNanoPrice(
-    currency, convertUnixToDate(Date.now()));
+  const currentNanoPrice = getNanoPrice(currency, convertUnixToDate(Date.now()));
 
   const rawItems = await db.all("SELECT * FROM items;");
   const prettyItems = [];
@@ -249,11 +248,13 @@ async function getInfo(db, address) {
     }
   }
 
+  const waitedNanoPrice = await currentNanoPrice;
+
   return new Promise((resolve, reject) => {
     return resolve({
       loading: false,
       settings,
-      currentNanoPrice,
+      currentNanoPrice: waitedNanoPrice,
       balance: {
         total: (Math.round((
           balanceTotal / Math.pow(10, 30) + Number.EPSILON) * 100) / 100)
