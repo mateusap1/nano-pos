@@ -32,7 +32,7 @@ export default function ReceivePayments() {
   let [waitingAmount, setWaitingAmount] = useState(0);
   let [receivedAmount, setReceivedAmount] = useState(0);
 
-  useEffect(() => {
+  useEffect(() => {    
     setFilteredItems(info?.prettyItems || []);
     setItems(
       (info?.rawItems || []).map(item => {
@@ -64,30 +64,6 @@ export default function ReceivePayments() {
 
       setItems(itemsMapCopy);
       setTotal(currency);
-    }
-  });
-
-  ipcRenderer.on('message-from-worker', (_, arg) => {
-    const command = arg.command;
-    const payload = arg.payload;
-
-    switch (command) {
-      case 'receive-transaction':
-        if (state === 'waiting') {
-          const { amount } = payload;
-
-          if (amount >= waitingAmount) {
-            setState('received');
-          } else {
-            setState('failure');
-          }
-
-          setReceivedAmount(amount);
-        }
-        break;
-
-      default:
-        
     }
   });
 

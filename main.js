@@ -67,21 +67,21 @@ function sendWindowMessage(targetWindow, message, payload) {
 	targetWindow.webContents.send(message, payload);
 }
 
-ipcMain.on('update-transactions', () => {
-  ipcMain.on('hidden-renderer-ready', () => {
+ipcMain.handle('update-transactions', () => {
+  ipcMain.handle('hidden-renderer-ready', () => {
     sendWindowMessage(hiddenWindow, 'update-transactions');
   });
 });
 
-ipcMain.on('message-from-main', (_, arg) => {
+ipcMain.handle('message-from-main', (_, arg) => {
   sendWindowMessage(hiddenWindow, 'message-from-main', arg);
 });
 
-ipcMain.on('message-from-worker', (_, arg) => {
+ipcMain.handle('message-from-worker', (_, arg) => {
   sendWindowMessage(mainWindow, 'message-from-worker', arg);
 });
 
-ipcMain.on('background-error', (_, arg) => {
+ipcMain.handle('background-error', (_, arg) => {
   const { message } = arg;
 
   dialog.showMessageBox(mainWindow, { 
@@ -91,7 +91,7 @@ ipcMain.on('background-error', (_, arg) => {
   });
 });
 
-ipcMain.on('show-files', (_, arg) => {
+ipcMain.handle('show-files', (_, arg) => {
   const { options } = arg;
 
   const csvPath = dialog.showOpenDialogSync(mainWindow, options)[0];

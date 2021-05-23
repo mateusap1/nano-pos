@@ -2,7 +2,7 @@ const electron = require('electron');
 const { ipcRenderer } = electron;
 
 const message2Background = (command, payload) => {
-  ipcRenderer.send('message-from-main', {
+  ipcRenderer.invoke('message-from-main', {
     command: command, payload: payload
   });
 }

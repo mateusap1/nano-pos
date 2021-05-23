@@ -228,7 +228,7 @@ export default function ProductsAndServices() {
               >Add Item</button>
               <button
                 onClick={() => {               
-                  ipcRenderer.send('show-files', {
+                  ipcRenderer.invoke('show-files', {
                     options: {
                       properties: ['openFile'],
                       filters: [{ name: 'csv', extensions: ['csv'] }]

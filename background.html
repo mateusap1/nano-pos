@@ -24,13 +24,13 @@
 			var socket;
 
 			const message2UI = (command, payload) => {
-				ipcRenderer.send('message-from-worker', {
+				ipcRenderer.invoke('message-from-worker', {
 					command: command, payload: payload
 				});
 			}
 
 			const error = (message) => {
-				ipcRenderer.send('background-error', { message });
+				ipcRenderer.invoke('background-error', { message });
 			}
 
 			const updateInfo = async (db) => {
@@ -51,8 +51,7 @@
 			}
 
 			const handleMessageFromMain = (_, arg) => {
-				const command = arg.command;
-				const payload = arg.payload;
+				const { command, payload } = arg;
 
 				initializeDB()
 					.then(db => {
@@ -118,7 +117,6 @@
 							
 							case 'stop-watch':
 
-								console.log('beep');
 								socket.terminate();
 								break;
 
