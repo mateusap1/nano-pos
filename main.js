@@ -71,15 +71,15 @@ ipcMain.on('update-transactions', () => {
   ipcMain.on('hidden-renderer-ready', () => {
     sendWindowMessage(hiddenWindow, 'update-transactions');
   });
-})
+});
 
 ipcMain.on('message-from-main', (_, arg) => {
   sendWindowMessage(hiddenWindow, 'message-from-main', arg);
-})
+});
 
 ipcMain.on('message-from-worker', (_, arg) => {
   sendWindowMessage(mainWindow, 'message-from-worker', arg);
-})
+});
 
 ipcMain.on('background-error', (_, arg) => {
   const { message } = arg;
@@ -89,4 +89,19 @@ ipcMain.on('background-error', (_, arg) => {
     type: 'error',
     buttons: ['Ok']
   });
-})
+});
+
+ipcMain.on('show-files', (_, arg) => {
+  const { options } = arg;
+
+  const csvPath = dialog.showOpenDialogSync(mainWindow, options)[0];
+
+  sendWindowMessage(hiddenWindow, 'message-from-main', {
+    command: 'import-csv',
+    payload: { csvPath }
+  });
+  sendWindowMessage(hiddenWindow, 'message-from-main', {
+    command: 'update-info',
+    payload: {}
+  });
+});

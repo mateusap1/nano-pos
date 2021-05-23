@@ -226,7 +226,16 @@ export default function ProductsAndServices() {
                   setActive(true);
                 }}
               >Add Item</button>
-              <button>Import CSV</button>
+              <button
+                onClick={() => {               
+                  ipcRenderer.send('show-files', {
+                    options: {
+                      properties: ['openFile'],
+                      filters: [{ name: 'csv', extensions: ['csv'] }]
+                    }
+                  });
+                }}
+              >Import CSV</button>
             </div>
             <hr />
             {items.length === 0 ? (
