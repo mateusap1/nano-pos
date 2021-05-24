@@ -40,16 +40,16 @@ export default function({ index, node_address }) {
       </div>
       <ul>
           <li className={index == 0 ? styles.selected : ''}>
-            <Link to="/transactions">Transactions</Link>
+            <Link to="/transactions" replace>Transactions</Link>
           </li>
           <li className={index == 1 ? styles.selected : ''}>
-            <Link to="/products-and-services">Products / Services</Link>
+            <Link to="/products-and-services" replace>Products / Services</Link>
           </li>
           <li className={index == 2 ? styles.selected : ''}>
-            <Link to="/receive-payments">Receive Payments</Link>
+            <Link to="/receive-payments" replace>Receive Payments</Link>
           </li>
           <li className={index == 3 ? styles.selected : ''}>
-            <Link to="/settings">Settings</Link>
+            <Link to="/settings" replace>Settings</Link>
           </li>
       </ul> 
       <div className={styles.node}>
