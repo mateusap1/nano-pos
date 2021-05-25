@@ -41,8 +41,6 @@ export function TransactionsContextProvider({ children }) {
         let tempRcvState = {...receivingState};
   
         tempRcvState.receivedAmount = amount;
-
-        console.log(tempRcvState.waitingAmount, tempRcvState.receivedAmount)
   
         if (receivingState.waitingAmount === null) {
           error('Payment received unexpectedly');
