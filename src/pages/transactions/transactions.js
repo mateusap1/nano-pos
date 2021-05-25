@@ -75,7 +75,7 @@ export default function Transactions() {
                               setOverlayContent(
                                 <div>
                                   {info.rawTransactions[index].details.map(item => (
-                                    <table>
+                                    <table key={item.id}>
                                       <thead>
                                         <tr>
                                           <th>Name</th>

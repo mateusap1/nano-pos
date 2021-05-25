@@ -1,8 +1,4 @@
-const { insertTransaction, getConfigs } = require('./manageDB');
-const WebSocket = require('ws');
-
-const WSS_SERVER='wss://ws.mynano.ninja/';
-const NANO_ADDRESS='nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7'
+const { insertTransaction } = require('./manageDB');
 
 // Action to subscribe to a particular address
 const subscribe_addresses = function(socket, addresses) {
@@ -70,8 +66,6 @@ async function startWatch(db, socket, address, callback) {
   socket.onmessage = function(response) {
     const data = JSON.parse(response.data);
 
-    console.log(JSON.stringify(data));
-
     if (data['topic'] === 'confirmation') {
       const hash = data['message']['hash'];
       const account = data['message']['account'];
@@ -79,7 +73,9 @@ async function startWatch(db, socket, address, callback) {
       const date = Math.floor(new Date().getTime() / 1000);
       const type = data['message']['block']['subtype'];
 
-      if (type === 'send') return;
+      console.log(JSON.stringify(data));
+
+      if (type === 'send' || account !== address) return;
 
       insertTransaction(db, hash, account, amount, date, 0);
       callback({
