@@ -77,7 +77,7 @@ async function startWatch(db, socket, address, callback) {
 
       if (type === 'send' || account !== address) return;
 
-      insertTransaction(db, hash, account, amount, date, 0);
+      insertTransaction(db, hash, account, amount, date, 1);
       callback({
         success: true,
         hash,
