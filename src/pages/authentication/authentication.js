@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useHistory } from 'react-router-dom';
+import { message2Background } from '../../utils/messageToBackground';
 
 import styles from './authentication.module.scss';
 
@@ -17,6 +17,7 @@ export default function Authentication() {
     if (addressRef.current.value !== '') {
       localStorage.setItem('address', addressRef.current.value);
       history.push('/transactions');
+      message2Background('update-info', {});
     }
   }
 
