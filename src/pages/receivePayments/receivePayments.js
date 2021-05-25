@@ -255,7 +255,6 @@ export default function ReceivePayments() {
                           <br />
                           <p>Thank your costumer for a ${tip} Nanos tip</p>
                           <br />
-                          <br />
                         </>
                       ) : null}
                     </div>
