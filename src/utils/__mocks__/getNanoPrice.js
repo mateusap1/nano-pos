@@ -8,6 +8,13 @@ async function getNanoPrice(currency, date) {
   });
 }
 
+async function getCurrentNanoPrice(currency) {
+  return new Promise((resolve, reject) => {
+    return resolve(9.8);
+  });
+}
+
 nanoRPC.getNanoPrice = getNanoPrice;
+nanoRPC.getCurrentNanoPrice = getCurrentNanoPrice;
 
 module.exports = nanoRPC;

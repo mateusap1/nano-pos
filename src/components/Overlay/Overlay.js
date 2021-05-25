@@ -4,19 +4,24 @@ import { IoAddCircle, IoCloseCircle } from 'react-icons/io5';
 import styles from './styles.module.scss';
 
 
-export default function({ children, active, deactivate, addItem }) {
+export default function({ children, state, deactivate, addItem }) {
   return (
-    <div className={styles.overlay} style={{display: active ? 'flex' : 'none'}}>
+    <div
+      className={styles.overlay}
+      style={{display: state !== 'deactivated' ? 'flex' : 'none'}}
+    >
       <div className={styles.overlayContent}>
         <div className={styles.topButtons}>
-          <IoAddCircle 
-            size="32px"
-            color="#40b64c"
-            onClick={() => {
-              addItem();
-              console.log('beep');
-            }}
-          />
+          {state === 'add-item' ? (
+            <IoAddCircle 
+              size="32px"
+              color="#40b64c"
+              onClick={() => {
+                addItem();
+                console.log('beep');
+              }}
+            />
+          ) : (<></>)}
 
           <IoCloseCircle 
             size="32px"

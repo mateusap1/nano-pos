@@ -12,6 +12,7 @@ const {
   insertItem,
   deleteItem,
   deleteItems,
+  insertBill,
   insertTransaction,
   syncTransactions,
   getInfo,
@@ -61,8 +62,7 @@ async function initializeDB() {
           );
 
           CREATE TABLE bills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            transaction_hash TEXT,
+            transaction_hash TEXT PRIMARY KEY,
             price REAL,
             date INTEGER
           );
@@ -105,24 +105,12 @@ async function addEssentialConfigs(db) {
       setting_value, 
       setting_type
     ) VALUES ('moneyRelated', 'currency', 'usd', 'string');
-
-    INSERT INTO global_config (
-      section_name, 
-      setting_name, 
-      setting_value, 
-      setting_type
-    ) VALUES (
-      'userRelated',
-      'address',
-      'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7',
-      'string'
-    );
   `);
 }
 
 // Actual Tests
 it('Should return the global settings added', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await db.exec(`
     INSERT INTO global_config (
@@ -149,7 +137,7 @@ it('Should return the global settings added', async () => {
 });
 
 it('Should insert the settings into the database', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await addConfig(db, 'test1', 'test1', 'test1', 0);
   await addConfig(db, 'test2', 'test2', 'test2', 0);
@@ -178,7 +166,7 @@ it('Should insert the settings into the database', async () => {
 });
 
 it('Should update the settings from the database', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await db.exec(`
     INSERT INTO global_config (
@@ -228,7 +216,7 @@ it('Should update the settings from the database', async () => {
 });
 
 it('Should delete any settings inside the database', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await db.exec(`
     INSERT INTO global_config (
@@ -246,7 +234,7 @@ it('Should delete any settings inside the database', async () => {
 });
 
 it('Should insert the items into the database', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await insertItem(
     db, 1, 'test1', 'test1', 'test1', 'test1', 1, 'test1');
@@ -279,7 +267,7 @@ it('Should insert the items into the database', async () => {
 });
 
 it('Should delete item with the corresponding ID', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   db.exec(`
     INSERT INTO items (
@@ -323,7 +311,7 @@ it('Should delete item with the corresponding ID', async () => {
 });
 
 it('Should delete any items inside the database', async () => {
-  db = await initializeDB();
+  const db = await initializeDB();
 
   await db.exec(`
     INSERT INTO items (
@@ -341,6 +329,110 @@ it('Should delete any items inside the database', async () => {
 
   const result = await db.all('SELECT * FROM items;');
   expect(result).toEqual([]);
+});
+
+it('Should insert the bill into the database', async () => {
+  const db = await initializeDB();
+
+  Date.now = jest.fn(() => 1621878375549);
+
+  db.exec(`
+    INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (
+      0, 'name0', 'description0', 'barcode0', 'category0', 4.9, 'extra0'
+    );
+
+    INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (
+      1, 'name1', 'description1', 'barcode1', 'category1', 9.9, 'extra1'
+    );
+
+    INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (
+      2, 'name2', 'description2', 'barcode2', 'category2', 1.9, 'extra2'
+    );
+
+    INSERT INTO items (
+      id,
+      name,
+      description,
+      barcode,
+      category,
+      price,
+      extra
+    ) VALUES (
+      3, 'name3', 'description3', 'barcode3', 'category3', 14.9, 'extra3'
+    );
+  `)
+
+  await insertBill(db, 'hash1', [2, 1]);
+  await insertBill(db, 'hash2', [0, 3, 2]);
+  
+  const resultBills = await db.all('SELECT * FROM bills;');
+  const resultBillItems = await db.all('SELECT * FROM bill_items;');
+
+  const expectedOutputBills = [{
+    transaction_hash: 'hash1',
+    price: 11.8,
+    date: 1621878375
+  }, {
+    transaction_hash: 'hash2',
+    price: 21.7,
+    date: 1621878375
+  }];
+
+  const expectedOutputBillItems = [{
+    id: 1,
+    bill_id: 'hash1',
+    item_id: 2
+  }, {
+    id: 2,
+    bill_id: 'hash1',
+    item_id: 1
+  }, {
+    id: 3,
+    bill_id: 'hash2',
+    item_id: 0
+  }, {
+    id: 4,
+    bill_id: 'hash2',
+    item_id: 3
+  }, {
+    id: 5,
+    bill_id: 'hash2',
+    item_id: 2
+  }];
+
+  expect(resultBills).toHaveLength(2);
+  for (let i = 0; i < resultBills.length; i++) {
+    expect(resultBills[i]).toMatchObject(expectedOutputBills[i]);
+  }
+
+  expect(resultBillItems).toHaveLength(5);
+  for (let i = 0; i < resultBillItems.length; i++) {
+    expect(resultBillItems[i]).toMatchObject(expectedOutputBillItems[i]);
+  }
 });
 
 it('Should insert the transactions into the database', async () => {
@@ -411,6 +503,16 @@ it('Should get all essential information and return it', async () => {
       1
     );
 
+    INSERT INTO transactions (
+      hash, account, amount, date, type
+    ) VALUES (
+      '62B5DF659FE4FD7E4BB108731E1AA1FB011A4E402EFC35139D422E25E038962F',
+      'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7',
+      20000000000000000000000000000,
+      1620498274,
+      1
+    );
+
     INSERT INTO items (
       id,
       name,
@@ -420,6 +522,21 @@ it('Should get all essential information and return it', async () => {
       price,
       extra
     ) VALUES (0, 'test', 'test', 'test', 'test', 0, 'test');
+
+    INSERT INTO bills (
+      transaction_hash,
+      price,
+      date
+    ) VALUES (
+      '324D62BFB7C4F9934AED588AD9153508307907B1191454098201E7EA692F654B',
+      0,
+      1620498274
+    );
+
+    INSERT INTO bill_items (bill_id, item_id) VALUES (
+      '324D62BFB7C4F9934AED588AD9153508307907B1191454098201E7EA692F654B',
+      0
+    );
   `);
 
   const address = 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7';
@@ -427,8 +544,7 @@ it('Should get all essential information and return it', async () => {
   const expectedSettings = {
     rpcNode: 'https://mynano.ninja/api/node/',
     wssServer: 'wss://ws.mynano.ninja/',
-    currency: 'usd',
-    address: 'nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqxprdr7'
+    currency: 'usd'
   };
 
   const expectedNanoPrice = 9.8;
@@ -444,6 +560,17 @@ it('Should get all essential information and return it', async () => {
       currency: '00.10 USD'
     },
     type: 'Receive'
+  }, {
+    hash: '62B5DF659FE4FD7E4BB108731E1AA1FB011A4E402EFC35139D422E25E038962F',
+    date: {
+      date: 'May 08, 2021',
+      hour: '03:24 PM'
+    },
+    amount: {
+      nano: '00.02',
+      currency: '00.20 USD'
+    },
+    type: 'Receive'
   }];
 
   const expectedRawTransactions = [{
@@ -453,7 +580,26 @@ it('Should get all essential information and return it', async () => {
       nano: 10000000000000000000000000000,
       currency: 0.098
     },
-    type: 1
+    type: 1,
+    details: [{
+      id: 0,
+      name: 'test',
+      description: 'test',
+      barcode: 'test',
+      category: 'test',
+      price: 0,
+      extra: 'test',
+      amount: 1
+    }]
+  }, {
+    hash: '62B5DF659FE4FD7E4BB108731E1AA1FB011A4E402EFC35139D422E25E038962F',
+    date: 1620498274,
+    amount: {
+      nano: 20000000000000000000000000000,
+      currency: 0.196
+    },
+    type: 1,
+    details: null
   }];
 
   const expectedPrettyItems = [{
@@ -481,7 +627,7 @@ it('Should get all essential information and return it', async () => {
     settings: expectedSettings,
     currentNanoPrice: expectedNanoPrice,
     balance: {
-      total: '00.01',
+      total: '00.03',
       today: '00.00',
     },
     prettyTransactions: expectedPrettyTransactions,
@@ -491,7 +637,7 @@ it('Should get all essential information and return it', async () => {
   };
 
   const result = await getInfo(db, address);
-  expect(result).toMatchObject(expectedOutput);
+  expect(result).toEqual(expectedOutput);
 });
 
 it('Should delete any transactions inside the database', async () => {

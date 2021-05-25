@@ -6,11 +6,13 @@ const NANO_ADDRESS='nano_11g7sktw95wxhq65zoo3xzjyodazi8d889abtzjs1cd7c8rnxazmqqx
 
 // Action to subscribe to a particular address
 const subscribe_addresses = function(socket, addresses) {
+
   let input = {
     action: 'subscribe',
     topic: 'confirmation',
     ack: true,
     options: {
+      all_local_accounts: false,
       accounts: addresses
     }
   }
@@ -41,10 +43,7 @@ const ping = function(socket) {
   socket.send(JSON.stringify(input));
 }
 
-async function startWatch(db, socket, callback) {
-  const configs = await getConfigs(db);
-  const address = configs.address;
-
+async function startWatch(db, socket, address, callback) {
   var intervalId = setInterval(function(){
     ping(socket);
   }, 5000);
@@ -71,7 +70,7 @@ async function startWatch(db, socket, callback) {
   socket.onmessage = function(response) {
     const data = JSON.parse(response.data);
 
-    console.log(data);
+    console.log(JSON.stringify(data));
 
     if (data['topic'] === 'confirmation') {
       const hash = data['message']['hash'];
@@ -80,9 +79,12 @@ async function startWatch(db, socket, callback) {
       const date = Math.floor(new Date().getTime() / 1000);
       const type = data['message']['block']['subtype'];
 
-      insertTransaction(hash, account, amount, date, type === 'send' ? 0 : 1);
+      if (type === 'send') return;
+
+      insertTransaction(db, hash, account, amount, date, 0);
       callback({
         success: true,
+        hash,
         amount
       });
     } 

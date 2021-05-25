@@ -6,7 +6,7 @@ import { useTransactions } from '../../contexts/TransactionsContext';
 import styles from './styles.module.scss';
 
 
-export default function({ index, node_address }) {
+export default function({ index }) {
   const {
     info
   } = useTransactions();
@@ -52,12 +52,13 @@ export default function({ index, node_address }) {
             <Link to="/settings" replace>Settings</Link>
           </li>
       </ul> 
-      <div className={styles.node}>
-          {node_address ? (
-            <p><span className={styles.connected}>Connected</span> to {node_address}</p>
-          ) : (
-            <p><span className={styles.notConnected}>Not Connected</span></p>
-          )}
+      <div className={styles.footer}>
+      {Number(info.currentNanoPrice?.toFixed(2)) ? (
+        <p>
+          ${Number(info.currentNanoPrice?.toFixed(2))} {
+            info.settings.currency.toUpperCase()} / NANO
+        </p>
+      ) : null}
       </div>
     </div>
   );

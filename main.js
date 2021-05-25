@@ -81,7 +81,7 @@ ipcMain.handle('message-from-worker', (_, arg) => {
   sendWindowMessage(mainWindow, 'message-from-worker', arg);
 });
 
-ipcMain.handle('background-error', (_, arg) => {
+ipcMain.handle('renderer-error', (_, arg) => {
   const { message } = arg;
 
   dialog.showMessageBox(mainWindow, { 
@@ -94,14 +94,17 @@ ipcMain.handle('background-error', (_, arg) => {
 ipcMain.handle('show-files', (_, arg) => {
   const { options } = arg;
 
-  const csvPath = dialog.showOpenDialogSync(mainWindow, options)[0];
+  const csvPaths = dialog.showOpenDialogSync(mainWindow, options);
 
-  sendWindowMessage(hiddenWindow, 'message-from-main', {
-    command: 'import-csv',
-    payload: { csvPath }
-  });
-  sendWindowMessage(hiddenWindow, 'message-from-main', {
-    command: 'update-info',
-    payload: {}
-  });
+  if (csvPaths) {
+    sendWindowMessage(hiddenWindow, 'message-from-main', {
+      command: 'import-csv',
+      payload: { csvPath: csvPaths[0] }
+    });
+
+    sendWindowMessage(hiddenWindow, 'message-from-main', {
+      command: 'update-info',
+      payload: {}
+    });
+  }
 });

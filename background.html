@@ -14,6 +14,7 @@
 				getInfo,
 				insertItem,
 				deleteItem,
+				insertBill,
 				updateConfigs,
 				getConfigs
 			} = require('./src/background/manageDB');
@@ -21,6 +22,7 @@
 			const { insertItemsCSV } = require('./src/background/manageCSV');
 			const { startWatch } = require('./src/background/watch');
 
+			const nano = Math.pow(10, 30);
 			var socket;
 
 			const message2UI = (command, payload) => {
@@ -30,7 +32,7 @@
 			}
 
 			const error = (message) => {
-				ipcRenderer.invoke('background-error', { message });
+				ipcRenderer.invoke('renderer-error', { message });
 			}
 
 			const updateInfo = async (db) => {
@@ -85,34 +87,41 @@
 								break;
 
 							case 'watch':
+								const { itemsId } = payload;
 
 								getConfigs(db)
 									.then(configs => {
-										const address = configs.address;
+										const address = localStorage.getItem('address');
+										if (!address) {
+											return;
+										}
+
 										const server = configs.wssServer;
 
 										// Setup WebSocket
 										socket = new WebSocket(server);
 
-										startWatch(db, socket, (data) => {
+										startWatch(db, socket, address, (data) => {
 											if (data.success) {
-												message2UI('receive-transaction', {
-													amount: data.amount / Math.pow(10, 30)
+												socket.terminate();
+												message2UI('receive-payment', {
+													amount: data.amount / nano
 												});
+
+												insertBill(db, data.hash, itemsId);
 											} else {
-												error(message);
+												error(data.message);
+												message2UI('cancel-payment', {});
+												socket.terminate();
 											}
 										});
-
-										ipcRenderer.removeListener(
-											'message-from-main', handleMessageFromMain);
 									})
 									.catch(err => {
 										error(err);
-
-										ipcRenderer.removeListener(
-											'message-from-main', handleMessageFromMain);
+										message2UI('cancel-payment', {});
+										socket.terminate();
 									});
+
 								break;
 							
 							case 'stop-watch':

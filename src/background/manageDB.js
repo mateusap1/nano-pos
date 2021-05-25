@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 
 const { convertUnixToDateAndHour, convertUnixToDate } = require('../utils/manageDates');
-const { getNanoPrice } = require('../utils/getNanoPrice');
+const { getNanoPrice, getCurrentNanoPrice } = require('../utils/getNanoPrice');
 const { accountHistory, accountInfo } = require('./nanoRPC');
 
 
@@ -103,6 +103,31 @@ async function deleteItems(db) {
   await db.run("DELETE FROM items;");
 }
 
+async function insertBill(db, transactionHash, itemsId) {
+  const date = Math.floor(Date.now() / 1000);
+
+  let price = await db.get(`
+    SELECT SUM(price)
+    FROM items
+    WHERE id IN (${itemsId.join(',')})
+  `);
+  price = Number(price['SUM(price)'].toFixed(2));
+
+  await db.run(`
+    INSERT INTO bills (
+      transaction_hash, price, date
+    ) VALUES (?, ?, ?);
+  `, [transactionHash, Number(price), date]);
+
+  for (itemId of itemsId) {
+    await db.run(`
+      INSERT INTO bill_items (
+        bill_id, item_id
+      ) VALUES (?, ?);
+    `, [transactionHash, itemId]);
+  }
+}
+
 async function insertTransaction(db, hash, account, amount, date, type) {
   await db.run("INSERT INTO transactions VALUES (?, ?, ?, ?, ?);",
     [hash, account, amount, date, type]);
@@ -158,7 +183,7 @@ async function getInfo(db, address) {
   const settings = await getConfigs(db);
   const currency = settings.currency;
 
-  const currentNanoPrice = getNanoPrice(currency, convertUnixToDate(Date.now()));
+  const currentNanoPrice = getCurrentNanoPrice(currency);
 
   const rawItems = await db.all("SELECT * FROM items;");
   const prettyItems = [];
@@ -187,6 +212,13 @@ async function getInfo(db, address) {
       'SELECT price FROM nano_price WHERE date = ? AND currency = ?',
       [date, currency]
     );
+
+    let details = await db.all(`
+      SELECT *, COUNT(id) as amount FROM items WHERE id IN (
+        SELECT item_id FROM bill_items WHERE bill_id = ?
+      );`, hash);
+    
+    details = details.filter((data) => data.amount > 0);
 
     if (cachedNanoPrice) {
       var nanoPrice = cachedNanoPrice.price;
@@ -238,7 +270,13 @@ async function getInfo(db, address) {
       amount: prettyAmount, 
       type: prettyType
     });
-    rawTransactions.push({hash, date, amount: rawAmount, type});
+    rawTransactions.push({
+      hash,
+      date,
+      amount: rawAmount,
+      type,
+      details: details.length > 0 ? details : null
+    });
 
     if (type === 1) {
       balanceTotal += amount;
@@ -299,6 +337,7 @@ module.exports = {
   insertItem,
   deleteItem,
   deleteItems,
+  insertBill,
   insertTransaction,
   syncTransactions,
   getInfo,

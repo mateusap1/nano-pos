@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 
 import Sidebar from '../../components/Sidebar/Sidebar';
+import Overlay from '../../components/Overlay/Overlay';
+
 import { useTransactions } from '../../contexts/TransactionsContext';
 
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { AiOutlineLoading3Quarters, AiFillInfoCircle } from "react-icons/ai";
 import styles from './transactions.module.scss';
 
 
@@ -12,9 +14,18 @@ export default function Transactions() {
     info
   } = useTransactions();
 
+  let [overlayState, setOverlayState] = useState('deactivated');
+  let [overlayContent, setOverlayContent] = useState(<></>);
+
   return (
     <>
-      <Sidebar index={0} node_address={"192.168.0.1:5555"} />
+      <Sidebar index={0} />
+      <Overlay 
+        state={overlayState} 
+        deactivate={() => setOverlayState('deactivated')}
+      >
+        {overlayContent}
+      </Overlay>
       <div className={styles.mainContent}>
         { (info.loading) ? (
           <div className={styles.voidContent}>
@@ -55,7 +66,39 @@ export default function Transactions() {
                       <td>
                         <span>{ transaction.type }</span>
                       </td>
-                      <td><button>Details</button></td>
+                      <td className={styles.iconContainer}>
+                        {info.rawTransactions[index].details ? (
+                          <AiFillInfoCircle
+                            size="32px"
+                            color="#457b9d"
+                            onClick={() => {
+                              setOverlayContent(
+                                <div>
+                                  {info.rawTransactions[index].details.map(item => (
+                                    <table>
+                                      <thead>
+                                        <tr>
+                                          <th>Name</th>
+                                          <th>Amount</th>
+                                          <th>Price</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr>
+                                          <td>{item.name}</td>
+                                          <td>{item.amount}</td>
+                                          <td>{item.price * item.amount}</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  ))}
+                                </div>
+                              );
+                              setOverlayState('get-info');
+                            }}
+                          />
+                        ) : null}
+                      </td>
                     </tr>
                   )
                 )}

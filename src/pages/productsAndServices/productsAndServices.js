@@ -3,7 +3,7 @@ import { AiOutlineLoading3Quarters, AiFillInfoCircle } from "react-icons/ai";
 import { IoCloseCircle } from 'react-icons/io5';
 
 import Sidebar from '../../components/Sidebar/Sidebar';
-import ItemInfo from '../../components/ItemInfo/ItemInfo';
+import Overlay from '../../components/Overlay/Overlay';
 
 import { useTransactions } from '../../contexts/TransactionsContext';
 import { message2Background } from '../../utils/messageToBackground';
@@ -29,7 +29,7 @@ export default function ProductsAndServices() {
   const extraRef = useRef(null);
 
   let [items, setItems] = useState(info?.prettyItems || []);
-  let [active, setActive] = useState(false);
+  let [overlayState, setOverlayState] = useState('deactivated');
   let [overlayContent, setOverlayContent] = useState(<></>);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function ProductsAndServices() {
       message2Background('insert-item', rawItemsDict);
       message2Background('update-info', {});
       resetInputs();
-      setActive(false);
+      setOverlayState('deactivated');
 
       let prettyItemsCopy = [...items];
       prettyItemsCopy.push(prettyItemsDict);
@@ -117,14 +117,14 @@ export default function ProductsAndServices() {
 
   return (
     <>
-      <Sidebar index={1} node_address={"192.168.0.1:5555"} />
-      <ItemInfo 
-        active={active} 
-        deactivate={() => setActive(false)}
+      <Sidebar index={1} />
+      <Overlay 
+        state={overlayState} 
+        deactivate={() => setOverlayState('deactivated')}
         addItem={() => (insertItem())}
       >
         {overlayContent}
-      </ItemInfo>
+      </Overlay>
       <div className={styles.mainContent}>
         {(info.loading) ? (
           <div className={styles.voidContent}>
@@ -223,7 +223,7 @@ export default function ProductsAndServices() {
                       </div>
                     </>
                   ));
-                  setActive(true);
+                  setOverlayState('add-item');
                 }}
               >Add Item</button>
               <button
@@ -311,7 +311,7 @@ export default function ProductsAndServices() {
                                   </div>
                                 </>
                               );
-                              setActive(true);
+                              setOverlayState('get-info');
                             }}
                           />
                           <IoCloseCircle

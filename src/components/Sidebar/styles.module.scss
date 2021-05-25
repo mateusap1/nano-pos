@@ -72,21 +72,12 @@
     }
   }
 
-  .node {
+  .footer {
     padding: 10px;
     font-size: 14px;
     position: fixed;
     bottom: 0;
     color: var(--gray-100);
-
-    p span{
-      &.connected {
-        color: var(--green);
-      }
-      &.notConnected {
-        color: var(--red);
-      }
-    }
   }
 }
 

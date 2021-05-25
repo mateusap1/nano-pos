@@ -52,8 +52,7 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE bills (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      transaction_hash TEXT,
+      transaction_hash TEXT PRIMARY KEY,
       price REAL,
       date INTEGER
     );`
