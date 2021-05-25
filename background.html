@@ -49,6 +49,10 @@
 						message2UI('update-info', { 
 							info
 						});
+					})
+					.catch(e => {
+						error("Program crashed, try restarting it");
+						console.log(e);
 					});
 			}
 
