@@ -55,18 +55,36 @@ export default function ReceivePayments() {
         minimumIntegerDigits: 2
       }));
     }
-  }, [receivingState])
+  }, [receivingState]);
+
+  const cancelWait = () => {
+    message2Background('stop-watch', {});
+    setReceivingState({
+      ...receivingState,
+      name: 'default',
+      waitingAmount: null
+    });
+  }
+
+  const correctPrice = () => {
+    let total = 0;
+    for (let i = 0; i < itemsMap.length; i++) {
+      total += itemsMap[i]['amount'] * itemsMap[i]['price'];
+    }
+    setTotal(total);
+
+    if (receivingState.name === 'waiting') {
+      cancelWait();
+    }
+  }
 
   const addNum = (id => {    
     let itemsMapCopy = [...itemsMap];
     const idIndex = itemsMapCopy.findIndex(value => value.id === id);
 
     itemsMapCopy[idIndex]['amount']++;
-
-    let currency = total + itemsMapCopy[idIndex]['price'];
-
     setItems(itemsMapCopy);
-    setTotal(currency);
+    correctPrice(idIndex);
   });
 
   const subtractNum = (id => {
@@ -76,11 +94,8 @@ export default function ReceivePayments() {
 
     if (itemsMapCopy[idIndex]['amount'] > 0) {
       itemsMapCopy[idIndex]['amount']--;
-
-      let currency = total - itemsMapCopy[idIndex]['price'];
-
       setItems(itemsMapCopy);
-      setTotal(currency);
+      correctPrice(idIndex);
     }
   });
 
@@ -231,14 +246,14 @@ export default function ReceivePayments() {
                     <hr />
                     <button
                       onClick={() => {
-                        message2Background('stop-watch', {});
-                        setReceivingState({
-                          ...receivingState,
-                          name: 'default',
-                          waitingAmount: null
-                        });
+                        cancelWait();
                       }}
                     >Cancel</button>
+                    <button
+                      onClick={() => {
+                        cancelWait();
+                      }}
+                    >Received</button>
                   </div>  
               }
               {
@@ -249,7 +264,7 @@ export default function ReceivePayments() {
                         color="#40b64c"
                         size="32px"
                       />
-                      {(tip !== '00.00') ? (
+                      {(Number(tip) > 0) ? (
                         <>
                           <br />
                           <br />
